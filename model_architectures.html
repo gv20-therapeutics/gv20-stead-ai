@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STEAD-AI: Model Architecture and Training — Supplementary Technical Reference</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']],
+    tags: 'ams',
+    macros: {
+      bm: ['{\\boldsymbol{#1}}', 1],
+      RR: '{\\mathbb{R}}',
+      1: '{\\mathbf{1}}',
+    }
+  }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#e8edf2',
+      primaryTextColor: '#1a1a1a',
+      primaryBorderColor: '#5b7a9d',
+      lineColor: '#5b7a9d',
+      secondaryColor: '#f0f4f8',
+      tertiaryColor: '#fff',
+      fontFamily: '"STIX Two Text", Georgia, serif',
+      fontSize: '13px'
+    },
+    flowchart: {
+      htmlLabels: true,
+      curve: 'basis',
+      nodeSpacing: 30,
+      rankSpacing: 40
+    }
+  });
+  await mermaid.run();
+  /* Scale up Figure 3 by 1.2x */
+  var fig3svg = document.querySelector('#fig3-wrapper svg');
+  if (fig3svg) {
+    var vb = fig3svg.getAttribute('viewBox');
+    var w = parseFloat(fig3svg.getAttribute('width') || fig3svg.style.width);
+    var h = parseFloat(fig3svg.getAttribute('height') || fig3svg.style.height);
+    if (w && h) {
+      fig3svg.setAttribute('width', w * 1.2);
+      fig3svg.setAttribute('height', h * 1.2);
+      fig3svg.style.maxWidth = 'none';
+    } else if (vb) {
+      var parts = vb.split(/[\s,]+/).map(Number);
+      fig3svg.setAttribute('width', parts[2] * 1.2);
+      fig3svg.setAttribute('height', parts[3] * 1.2);
+      fig3svg.style.maxWidth = 'none';
+    }
+  }
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;1,400&family=Source+Code+Pro:wght@400;500&display=swap');
+  :root {
+    --fg: #1a1a1a;
+    --bg: #fff;
+    --accent: #1a3c5e;
+    --border: #c5ccd3;
+    --code-bg: #f5f7f9;
+    --table-head: #2c3e50;
+    --table-stripe: #f8f9fb;
+    --note-bg: #f0f4f8;
+    --note-border: #5b7a9d;
+    --alg-bg: #fafbfc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'STIX Two Text', 'Georgia', 'Times New Roman', serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.72;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+    font-size: 15px;
+  }
+  h1 {
+    font-size: 1.55rem;
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 0.15rem;
+    line-height: 1.35;
+  }
+  .authors {
+    text-align: center;
+    color: #444;
+    font-size: 0.92rem;
+    margin-bottom: 0.1rem;
+  }
+  .affiliation {
+    text-align: center;
+    color: #666;
+    font-size: 0.85rem;
+    font-style: italic;
+    margin-bottom: 1.8rem;
+  }
+  .abstract {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.9rem 1.2rem;
+    margin-bottom: 2rem;
+    background: var(--note-bg);
+  }
+  .abstract h2 {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+    border: none;
+    padding: 0;
+    color: var(--accent);
+  }
+  .abstract p { font-size: 0.93rem; margin-bottom: 0; }
+  h2 {
+    font-size: 1.25rem;
+    color: var(--accent);
+    margin-top: 2.2rem;
+    margin-bottom: 0.55rem;
+    border-bottom: 1.5px solid var(--border);
+    padding-bottom: 0.2rem;
+  }
+  h3 {
+    font-size: 1.05rem;
+    color: #2c3e50;
+    margin-top: 1.4rem;
+    margin-bottom: 0.35rem;
+  }
+  h4 {
+    font-size: 0.97rem;
+    color: #34495e;
+    margin-top: 1rem;
+    margin-bottom: 0.25rem;
+    font-style: italic;
+  }
+  p { margin-bottom: 0.8rem; text-align: justify; }
+  code {
+    font-family: 'Source Code Pro', 'Menlo', 'Consolas', monospace;
+    font-size: 0.84em;
+    background: var(--code-bg);
+    padding: 0.12em 0.3em;
+    border-radius: 3px;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.8rem 1rem;
+    overflow-x: auto;
+    font-family: 'Source Code Pro', 'Menlo', 'Consolas', monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.1rem;
+    font-size: 0.9rem;
+  }
+  th {
+    background: var(--table-head);
+    color: #fff;
+    padding: 0.45rem 0.65rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.87rem;
+  }
+  td {
+    padding: 0.42rem 0.65rem;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+  caption, .table-caption {
+    font-size: 0.88rem;
+    text-align: left;
+    margin-bottom: 0.4rem;
+    color: #333;
+    font-weight: 600;
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 3.5px solid var(--note-border);
+    padding: 0.6rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    border-radius: 0 4px 4px 0;
+  }
+  .hierarchy {
+    font-family: 'Source Code Pro', 'Menlo', monospace;
+    font-size: 0.84rem;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 1rem;
+    line-height: 1.55;
+  }
+  .algorithm {
+    background: var(--alg-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+  .algorithm .alg-title {
+    font-weight: 600;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.92rem;
+  }
+  .algorithm ol { padding-left: 1.4rem; margin-bottom: 0; }
+  .algorithm li { margin-bottom: 0.25rem; }
+  .shape {
+    color: #6c3483;
+    font-family: 'Source Code Pro', 'Menlo', monospace;
+    font-size: 0.84em;
+  }
+  .ref { font-size: 0.88rem; }
+  .ref ol { padding-left: 1.5rem; }
+  .ref li { margin-bottom: 0.35rem; text-align: left; }
+  .toc { margin-bottom: 2rem; font-size: 0.92rem; }
+  .toc ol { padding-left: 1.4rem; }
+  .toc li { margin-bottom: 0.2rem; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  sup { font-size: 0.75em; }
+  .eq-label { float: right; color: #888; font-size: 0.85em; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+  .diagram-container {
+    margin: 1.2rem 0;
+    text-align: center;
+    overflow-x: auto;
+  }
+  .diagram-container .mermaid {
+    display: inline-block;
+    text-align: left;
+  }
+  #fig3-wrapper {
+    overflow: visible;
+  }
+  #fig3-wrapper svg {
+    max-width: none !important;
+  }
+  .diagram-caption {
+    font-size: 0.88rem;
+    text-align: left;
+    margin-top: 0.3rem;
+    margin-bottom: 0.8rem;
+    color: #333;
+  }
+  .diagram-caption strong { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>STEAD-AI: Deep Learning Model Architectures<br>for B Cell Receptor Repertoire Analysis</h1>
+<p class="authors">GV20 Therapeutics</p>
+<p class="affiliation">Supplementary Technical Reference</p>
+
+<!-- ============================================================ -->
+<div class="abstract">
+<h2>Abstract</h2>
+<p>
+This document provides a self-contained mathematical description of the STEAD-AI model family,
+a hierarchy of deep neural networks for patient-level prediction from B cell receptor (BCR)
+repertoire data. We detail the architecture, objective functions, evaluation metrics,
+and implementation choices for each of the eight model classes, ranging from a minimal
+single-layer baseline to a multi-task learning framework that simultaneously optimizes
+classification, regression, and survival objectives.
+</p>
+</div>
+
+<!-- ============================================================ TOC -->
+<div class="toc">
+<strong>Contents</strong>
+<ol>
+  <li><a href="#sec-intro">Introduction</a></li>
+  <li><a href="#sec-notation">Notation and Conventions</a></li>
+  <li><a href="#sec-input">Input Representation</a></li>
+  <li><a href="#sec-hierarchy">Model Hierarchy</a></li>
+  <li><a href="#sec-base">Base Model: RepertoireModel</a></li>
+  <li><a href="#sec-twolayer">TwoLayerModel</a></li>
+  <li><a href="#sec-encode">EncodeLayerModel</a></li>
+  <li><a href="#sec-isotype">IsotypeModel</a></li>
+  <li><a href="#sec-isotypefast">IsotypeModelFast</a></li>
+  <li><a href="#sec-phialbcr">PhialBCR</a></li>
+  <li><a href="#sec-batch">PhialBCR_batch</a></li>
+  <li><a href="#sec-mtl">PhialBCR_MTL</a></li>
+  <li><a href="#sec-init">Weight Initialization and Regularization</a></li>
+  <li><a href="#sec-training">Training Procedure</a></li>
+  <li><a href="#sec-summary">Summary</a></li>
+  <li><a href="#sec-references">References</a></li>
+</ol>
+</div>
+
+<!-- ============================================================ 1. INTRO -->
+
+<h2 id="sec-intro">1. Introduction</h2>
+
+<p>
+The adaptive immune system generates a diverse repertoire of B cell receptors (BCRs)
+through V(D)J recombination and somatic hypermutation. The complementarity-determining
+regions (CDR1, CDR2, CDR3) of these receptors encode antigen-binding specificity, and
+the distribution of BCR sequences in a patient reflects their immunological history.
+Computational analysis of BCR repertoires from high-throughput sequencing thus offers a
+window into disease state, treatment response, and prognosis.
+</p>
+
+<p>
+A fundamental challenge in repertoire-level prediction is that each patient sample
+consists of a <em>variable-size set</em> of BCR sequences&mdash;ranging from hundreds to
+tens of thousands&mdash;yet the prediction target is a single patient-level label. The
+STEAD-AI model family addresses this challenge through a permutation-invariant
+max-pooling architecture: individual BCR sequences are independently transformed into
+motif activation vectors, then aggregated per patient via element-wise maximum,
+yielding a fixed-dimensional representation regardless of repertoire size.
+</p>
+
+<p>
+The models form an inheritance hierarchy that progressively introduces
+(i) learnable amino acid embeddings,
+(ii) isotype-aware gene layers that capture motif&ndash;immunoglobulin interactions,
+(iii) sparse computation for efficiency,
+(iv) multi-modal objective functions including survival analysis, and
+(v) multi-task learning with missing-data handling.
+This document provides a complete mathematical specification of each model class.
+</p>
+
+<!-- ============================================================ 2. NOTATION -->
+
+<h2 id="sec-notation">2. Notation and Conventions</h2>
+
+<p class="table-caption">Table 1. Notation used throughout this document.</p>
+<table>
+<tr><th>Symbol</th><th>Description</th></tr>
+<tr><td>$B$</td><td>Mini-batch size (number of patients/samples)</td></tr>
+<tr><td>$M$</td><td>Maximum number of BCR $k$-mers per sample (zero-padded)</td></tr>
+<tr><td>$S$</td><td>$k$-mer length (number of amino acid positions)</td></tr>
+<tr><td>$E$</td><td>Amino acid embedding dimension</td></tr>
+<tr><td>$N$</td><td>Number of motif filters (hidden-layer width)</td></tr>
+<tr><td>$C$</td><td>Number of immunoglobulin isotype categories</td></tr>
+<tr><td>$L$</td><td>Number of output labels/targets (sign encodes mode; see Section 10)</td></tr>
+<tr><td>$V$</td><td>Number of valid (non-padded) $k$-mers in a batch ($V \leq B \!\times\! M$)</td></tr>
+<tr><td>$K$</td><td>Number of tasks (multi-task learning)</td></tr>
+<tr><td>$|\mathcal{A}|$</td><td>Amino acid vocabulary size ($= 21$, including stop codon <code>*</code>)</td></tr>
+</table>
+
+<p>
+We denote matrices and vectors in bold ($\bm{W}$, $\bm{x}$), scalars in italic ($\alpha$, $N$),
+and sets in calligraphic script ($\mathcal{V}$, $\mathcal{A}$). The operator $[\cdot \| \cdot]$
+denotes concatenation, $\odot$ denotes the Hadamard (element-wise) product, and $\otimes$ denotes
+the outer product. All indices are 1-based except where noted.
+</p>
+
+<!-- ============================================================ 3. INPUT -->
+
+<h2 id="sec-input">3. Input Representation</h2>
+
+<h3>3.1 Amino Acid Vocabulary</h3>
+
+<p>
+BCR sequences are represented over a vocabulary $\mathcal{A}$ of 20 standard amino acids
+plus a padding token (<code>*</code>):
+</p>
+<pre>
+A  C  D  E  F  G  H  I  K  L  M  N  P  Q  R  S  T  V  W  Y  *
+</pre>
+<p>
+Each residue is mapped to an integer index $a \in \{0, 1, \ldots, 20\}$.
+Sequences shorter than the required $k$-mer length are right-padded with <code>*</code>.
+</p>
+
+<h3>3.2 Amino Acid Embedding</h3>
+
+<p>
+Models from EncodeLayerModel onward replace integer indices with dense vector representations
+via a learnable embedding layer $\bm{E}_{\text{embed}} \in \RR^{|\mathcal{A}| \times E}$.
+Three initialization strategies are supported:
+</p>
+
+<ol style="padding-left:1.5rem; margin-bottom:0.9rem;">
+<li><strong>Atchley factors</strong> ($E = 5$): Each amino acid is initialized with its five
+Atchley factor values&mdash;principal components derived from 54 physicochemical properties
+of amino acids [1]. The stop codon <code>*</code> is initialized to the zero vector.</li>
+<li><strong>Random initialization</strong>: Standard PyTorch embedding initialization.</li>
+<li><strong>User-supplied matrix</strong>: An arbitrary pre-computed embedding table.</li>
+</ol>
+
+<h3>3.3 $k$-mer Extraction</h3>
+
+<p>
+For each BCR sequence, the CDR1, CDR2, and CDR3 amino acid sequences are first padded to
+minimum lengths ($k_1$, $k_2$, $k_3$ respectively, default 3, 3, 6) and then concatenated.
+Overlapping $k$-mers of length $S$ are extracted from the concatenated string with stride 1.
+Each $k$-mer is associated with its immunoglobulin constant-region gene annotation (isotype).
+</p>
+
+<h3>3.4 Isotype Encoding</h3>
+
+<p>
+Immunoglobulin heavy- and light-chain genes are grouped into $C = 8$ categories based on
+functional similarity:
+</p>
+
+<p class="table-caption">Table 2. Immunoglobulin gene grouping used in isotype-aware models.</p>
+<table>
+<tr><th>Category</th><th>Constituent Genes</th><th>Immunoglobulin Class</th></tr>
+<tr><td>IGHM|IGHD</td><td>IGHM, IGHD</td><td>IgM, IgD</td></tr>
+<tr><td>IGHG1</td><td>IGHG1</td><td>IgG1</td></tr>
+<tr><td>IGHG2/4</td><td>IGHG2, IGHG4</td><td>IgG2, IgG4</td></tr>
+<tr><td>IGHG3</td><td>IGHG3</td><td>IgG3</td></tr>
+<tr><td>IGHA1/2</td><td>IGHA1, IGHA2</td><td>IgA1, IgA2</td></tr>
+<tr><td>IGK</td><td>IGK</td><td>&kappa; light chain</td></tr>
+<tr><td>IGL</td><td>IGL</td><td>&lambda; light chain</td></tr>
+<tr><td>Others</td><td>(all remaining)</td><td>Unresolved</td></tr>
+</table>
+
+<p>
+For each $k$-mer, a binary count vector $\bm{c} \in \{0, 1\}^C$ indicates which isotype
+categories contributed that $k$-mer to the repertoire. The full count tensor for a batch is
+$\bm{c} \in \{0, 1\}^{B \times M \times C}$.
+</p>
+
+<h3>3.5 Batch Representation</h3>
+
+<p>
+After preprocessing, each mini-batch consists of:
+</p>
+<ul style="padding-left:1.5rem; margin-bottom:0.9rem;">
+<li><strong>Sequence tensor</strong>: $\bm{X} \in \{0, \ldots, |\mathcal{A}|\!-\!1\}^{B \times M \times S}$ &mdash; integer-encoded $k$-mers</li>
+<li><strong>Count tensor</strong>: $\bm{c} \in \{0, 1\}^{B \times M \times C}$ &mdash; isotype indicators (or $\bm{c} \in \RR^{B \times M}$ for models without isotype awareness)</li>
+<li><strong>Target</strong>: $\bm{y}$ &mdash; class labels, continuous values, or survival times (format depends on task)</li>
+</ul>
+
+<!-- ============================================================ 4. HIERARCHY -->
+
+<h2 id="sec-hierarchy">4. Model Hierarchy</h2>
+
+<p>
+The eight model classes form a linear inheritance chain, where each child extends its parent
+with additional architectural components:
+</p>
+
+<p class="diagram-caption"><strong>Figure 1.</strong> Model inheritance hierarchy. Each child class extends its parent
+with additional architectural components. The principal production model (PhialBCR) is
+highlighted in green; its specialized descendants are shown in blue.</p>
+<div class="diagram-container">
+<pre class="mermaid">
+graph TD
+    A["<b>nn.Module</b>"]
+    B["<b>RepertoireModel</b><br/><i>Linear + max-pool</i>"]
+    C["<b>TwoLayerModel</b><br/><i>Hidden motif layer</i>"]
+    D["<b>EncodeLayerModel</b><br/><i>Learnable AA embedding</i>"]
+    E["<b>IsotypeModel</b><br/><i>Isotype-aware gene layer</i>"]
+    F["<b>IsotypeModelFast</b><br/><i>Sparse computation</i>"]
+    G["<b>PhialBCR</b><br/><i>4 prediction modes</i>"]
+    H["<b>PhialBCR_batch</b><br/><i>Batch normalization</i>"]
+    K["<b>PhialBCR_MTL</b><br/><i>Multi-task learning</i>"]
+
+    A --> B --> C --> D --> E --> F --> G
+    G --> H
+    G --> K
+
+    style A fill:#fff,stroke:#2c3e50,stroke-width:1px,color:#555
+    style G fill:#d5e8d4,stroke:#2c3e50,stroke-width:2px
+    style H fill:#dae8fc,stroke:#2c3e50,stroke-width:2px
+    style K fill:#dae8fc,stroke:#2c3e50,stroke-width:2px
+</pre>
+</div>
+
+<p>
+All models inherit the training loop, checkpointing, and evaluation infrastructure from
+RepertoireModel (Figure&nbsp;1). The shared design principle across all models is <em>set-level
+max-pooling</em>: each BCR sequence is independently mapped to a feature vector, and the
+element-wise maximum over all sequences in a repertoire yields a fixed-dimensional
+patient representation.
+</p>
+
+<!-- ============================================================ 5. BASE -->
+
+<h2 id="sec-base">5. Base Model: RepertoireModel</h2>
+
+<h3>5.1 Architecture</h3>
+
+<p>
+RepertoireModel provides the minimal architecture as a baseline. It consists of a single
+fully connected layer followed by repertoire-level max-pooling.
+</p>
+
+<p><strong>Layer:</strong> $\bm{W} \in \RR^{2 \times S}$, $\;\bm{b} \in \RR^{2}$</p>
+
+<h3>5.2 Forward Pass</h3>
+
+<p>
+Given a batch of integer-encoded sequences $\bm{X} \in \{0, \ldots, |\mathcal{A}|\!-\!1\}^{B \times M \times S}$
+and counts $\bm{c} \in \RR^{B \times M}$, the input is first converted to a one-hot (binary)
+representation $\bar{\bm{X}} \in \{0,1\}^{B \times M \times (S \cdot |\mathcal{A}|)}$ via a look-up
+table. The forward computation is:
+</p>
+
+$$
+\begin{aligned}
+\bm{h}_{i,j} &= \text{ReLU}\!\bigl(\bm{W}\,\bar{\bm{x}}_{i,j} + \bm{b}\bigr) \in \RR^{2} \\[3pt]
+\tilde{\bm{h}}_{i,j} &= \begin{cases} \bm{h}_{i,j} & \text{if } c_{i,j} > 0 \\ \bm{0} & \text{otherwise} \end{cases} \\[3pt]
+\bm{z}_i &= \max_{j=1}^{M}\, \tilde{\bm{h}}_{i,j} \in \RR^{2}
+\end{aligned}
+$$
+
+<p>
+where $i$ indexes patients and $j$ indexes $k$-mers within a repertoire. Padded positions
+($c_{i,j} = 0$) are zeroed before pooling so they cannot contribute to the maximum.
+</p>
+
+<h3>5.3 Objective and Evaluation</h3>
+
+<p>
+The output $\bm{z}_i$ is a 2-class logit vector, trained with softmax cross-entropy loss and
+evaluated by classification accuracy.
+</p>
+
+<!-- ============================================================ 6. TWOLAYER -->
+
+<h2 id="sec-twolayer">6. TwoLayerModel</h2>
+
+<h3>6.1 Architecture</h3>
+
+<p>
+TwoLayerModel extends RepertoireModel by separating the computation into a <em>$k$-mer
+layer</em> (sequence &rarr; motifs) and an <em>output layer</em> (motifs &rarr; predictions),
+with a configurable hidden dimension $N$.
+</p>
+
+<p><strong>Layers:</strong></p>
+<ul style="padding-left:1.5rem; margin-bottom:0.7rem;">
+<li>$\text{fc}_1$: $\text{Linear}(S \cdot |\mathcal{A}| \;\to\; N)$ &mdash; $k$-mer layer</li>
+<li>$\text{fc}_2$: $\text{Linear}(N \;\to\; L)$ &mdash; output layer</li>
+</ul>
+
+<h3>6.2 Forward Pass</h3>
+
+$$
+\begin{aligned}
+\bm{h}_{i,j} &= \text{ReLU}\!\bigl(\bm{W}_1\,\bar{\bm{x}}_{i,j} + \bm{b}_1\bigr) \in \RR^{N} \\[3pt]
+\bm{m}_i &= \max_{j:\, c_{i,j}>0}\, \bm{h}_{i,j} \in \RR^{N} \\[3pt]
+\bm{z}_i &= \bm{W}_2\,\bm{m}_i + \bm{b}_2 \in \RR^{L}
+\end{aligned}
+$$
+
+<p>
+The intermediate vector $\bm{m}_i$ is the <em>motif representation</em> of patient $i$:
+each component records the maximum activation of a learned sequence motif across all BCRs
+in the repertoire. This representation is permutation-invariant with respect to the ordering
+of BCR sequences.
+</p>
+
+<!-- ============================================================ 7. ENCODE -->
+
+<h2 id="sec-encode">7. EncodeLayerModel</h2>
+
+<h3>7.1 Architecture</h3>
+
+<p>
+EncodeLayerModel replaces the one-hot input encoding with a learnable amino acid embedding
+layer, allowing the model to discover dense biochemical representations from data.
+</p>
+
+<ul style="padding-left:1.5rem; margin-bottom:0.7rem;">
+<li>$\text{em}$: $\text{Embedding}(|\mathcal{A}|, \, E)$</li>
+<li>$\text{fc}_1$: $\text{Linear}(S \cdot E \;\to\; N)$ &mdash; $k$-mer layer</li>
+<li>$\text{fc}_2$: $\text{Linear}(N \;\to\; L)$ &mdash; output layer</li>
+</ul>
+
+<h3>7.2 Forward Pass</h3>
+
+$$
+\begin{aligned}
+\bm{e}_{i,j} &= \bigl[\text{Embed}(x_{i,j,1}) \;\|\; \cdots \;\|\; \text{Embed}(x_{i,j,S})\bigr] \in \RR^{S \cdot E} \\[3pt]
+\bm{h}_{i,j} &= \text{ReLU}\!\bigl(\bm{W}_1\,\bm{e}_{i,j} + \bm{b}_1\bigr) \in \RR^{N} \\[3pt]
+\bm{m}_i &= \max_{j:\, c_{i,j}>0}\, \bm{h}_{i,j} \in \RR^{N} \\[3pt]
+\bm{z}_i &= \bm{W}_2\,\bm{m}_i + \bm{b}_2 \in \RR^{L}
+\end{aligned}
+$$
+
+<p>
+where $\text{Embed}: \{0, \ldots, |\mathcal{A}|\!-\!1\} \to \RR^E$ is the shared embedding
+look-up for all sequence positions, and $[\cdot\|\cdot]$ denotes vector concatenation.
+</p>
+
+<!-- ============================================================ 8. ISOTYPE -->
+
+<h2 id="sec-isotype">8. IsotypeModel</h2>
+
+<h3>8.1 Motivation</h3>
+
+<p>
+BCR sequences carry not only CDR-region amino acid information but also immunoglobulin
+isotype annotations that reflect B cell differentiation state and effector function.
+IsotypeModel introduces an <em>isotype-aware gene layer</em> that models interactions
+between sequence-derived motifs and isotype usage through an outer-product operation.
+</p>
+
+<h3>8.2 Architecture</h3>
+
+<ul style="padding-left:1.5rem; margin-bottom:0.7rem;">
+<li>$\text{em}$: $\text{Embedding}(|\mathcal{A}|,\, E)$</li>
+<li>$\text{fc}_1$: $\text{Linear}(S \cdot E \;\to\; N)$ &mdash; $k$-mer layer</li>
+<li>$\text{fc}_2$: $\text{Linear}(C \;\to\; N)$ &mdash; gene layer (applied as element-wise product)</li>
+<li>$\text{drop}_1$, $\text{drop}_2$: $\text{Dropout}(p = 0.5)$</li>
+<li>$\text{out}$: $\text{Linear}(N \;\to\; L)$ &mdash; output layer</li>
+</ul>
+
+<h3>8.3 Forward Pass</h3>
+
+<p>
+The forward pass proceeds in five stages:
+</p>
+
+<h4>Stage 1: Embedding and $k$-mer layer</h4>
+
+$$
+\bm{h}_{i,j} = \text{ReLU}\!\bigl(\bm{W}_1\,\bm{e}_{i,j} + \bm{b}_1\bigr) \in \RR^{N}
+$$
+
+<h4>Stage 2: Outer product with isotype counts</h4>
+
+<p>
+For each $k$-mer $(i, j)$ with isotype count vector $\bm{c}_{i,j} \in \RR^C$, the motif
+activation vector is broadcast across isotype channels:
+</p>
+
+$$
+\bm{G}_{i,j} = \bm{h}_{i,j}\,\bm{c}_{i,j}^\top \in \RR^{N \times C}
+\tag{1}
+$$
+
+<p>
+This is implemented as a batched matrix multiplication:
+<span class="shape">(B&times;M, N, 1) &times; (B&times;M, 1, C) &rarr; (B&times;M, N, C)</span>.
+</p>
+
+<h4>Stage 3: Repertoire-level max-pooling</h4>
+
+$$
+\bm{P}_i = \max_{j:\, c_{i,j} \neq \bm{0}}\, \bm{G}_{i,j} \in \RR^{N \times C}
+$$
+
+<p>followed by $\bm{P}_i \leftarrow \text{Dropout}_1(\bm{P}_i)$.</p>
+
+<h4>Stage 4: Motif layer</h4>
+
+<p>
+The gene-layer weight matrix $\bm{W}_2 \in \RR^{N \times C}$ modulates the pooled
+motif&ndash;isotype matrix via a Hadamard product, followed by summation over the isotype
+dimension:
+</p>
+
+$$
+\bm{m}_i = \text{ReLU}\!\left(\sum_{c=1}^{C} \bm{P}_{i,:,c} \odot \bm{W}_{2,:,c} \;+\; \bm{b}_2\right) \in \RR^{N}
+\tag{2}
+$$
+
+<h4>Stage 5: Output</h4>
+
+$$
+\bm{z}_i = \bm{W}_{\text{out}}\,\text{Dropout}_2(\bm{m}_i) + \bm{b}_{\text{out}} \in \RR^{L}
+$$
+
+<!-- ============================================================ 9. ISOTYPEFAST -->
+
+<h2 id="sec-isotypefast">9. IsotypeModelFast</h2>
+
+<p>
+IsotypeModelFast is a computationally optimized variant of IsotypeModel. Since BCR repertoires
+are zero-padded to a uniform length $M$ and many positions may be empty, significant computation
+is wasted on padded entries. This model filters out invalid positions before the expensive
+embedding and fully connected layers.
+</p>
+
+<h3>9.1 Sparse Computation Strategy</h3>
+
+<p>
+Define the per-position validity indicator as the total isotype count:
+</p>
+
+$$
+v_{i,j} = \sum_{c=1}^{C} c_{i,j,c}
+$$
+
+<p>
+and the valid index set $\mathcal{V} = \{(i,j) : v_{i,j} > 0\}$, with $|\mathcal{V}| = V$.
+</p>
+
+<div class="algorithm">
+<div class="alg-title">Algorithm 1: IsotypeModelFast Forward Pass</div>
+<ol>
+<li>Gather valid $k$-mers: $\bm{X}_{\text{valid}} \in \RR^{V \times S}$, $\;\bm{c}_{\text{valid}} \in \RR^{V \times C}$</li>
+<li>Embed: $\bm{e} = \text{Flatten}\bigl(\text{Embed}(\bm{X}_{\text{valid}})\bigr) \in \RR^{V \times (S \cdot E)}$</li>
+<li>$k$-mer layer: $\bm{h} = \text{ReLU}(\bm{W}_1\,\bm{e} + \bm{b}_1) \in \RR^{V \times N}$</li>
+<li>Outer product: $\bm{G} = \bm{h}\,\bm{c}_{\text{valid}}^\top \in \RR^{V \times N \times C}$</li>
+<li>Scatter: $\bm{G}_{\text{full}} \in \RR^{(B \cdot M) \times N \times C}$, initialized to $-\infty$ for max-pool identity, with $\bm{G}_{\text{full}}[\mathcal{V}] = \bm{G}$</li>
+<li>Max-pool: $\bm{P}_i = \max_{j=1}^{M}\, \bm{G}_{\text{full}}[(i\!-\!1)M{+}1 \,:\, iM] \in \RR^{N \times C}$</li>
+<li>Continue with Stages 4&ndash;5 of IsotypeModel (Eq.&nbsp;2).</li>
+</ol>
+</div>
+
+<p>
+By processing only the $V$ valid entries through the embedding lookup and matrix
+multiplications, this optimization typically reduces wall-clock time by 30&ndash;60%
+on sparse repertoire data.
+</p>
+
+<!-- ============================================================ 10. PHIALBCR -->
+
+<h2 id="sec-phialbcr">10. PhialBCR</h2>
+
+<h3>10.1 Overview</h3>
+
+<p>
+PhialBCR is the principal production model. It extends IsotypeModelFast with four
+prediction modes, selectable via the <code>num_labels</code> parameter, enabling the same
+architecture to serve classification, regression, and survival analysis tasks.
+</p>
+
+<h3>10.2 Prediction Modes</h3>
+
+<p class="table-caption">Table 3. PhialBCR run modes determined by the <code>num_labels</code> parameter $L$.</p>
+<table>
+<tr><th>$L$</th><th>Mode</th><th>Output Dim.</th><th>Task Example</th></tr>
+<tr><td>$L > 1$</td><td>Classification</td><td>$L$</td><td>Cancer type, treatment response</td></tr>
+<tr><td>$L = 1$</td><td>Scalar regression</td><td>$1$</td><td>Continuous biomarker</td></tr>
+<tr><td>$L = -1$</td><td>Cox-PH survival</td><td>$1$</td><td>Overall survival</td></tr>
+<tr><td>$L \lt -1$</td><td>Multi-target regression</td><td>$|L|$</td><td>Gene expression scores</td></tr>
+</table>
+
+<h3>10.3 Objective Functions</h3>
+
+<h4>10.3.1 Classification ($L > 1$): Cross-entropy loss</h4>
+
+$$
+\mathcal{L}_{\text{cls}} = -\frac{1}{B}\sum_{i=1}^{B}\log\frac{\exp(z_{i,y_i})}{\sum_{\ell=1}^{L}\exp(z_{i,\ell})}
+\tag{3}
+$$
+
+<h4>10.3.2 Regression ($L = 1$ or $L \lt -1$): Smooth $\ell_1$ loss</h4>
+
+<p>
+The Huber loss (smooth $\ell_1$) with transition point $\beta = 1$ is used for regression
+tasks, providing robustness to outliers:
+</p>
+
+$$
+\mathcal{L}_{\text{reg}} = \frac{1}{n}\sum_{i=1}^{n}
+\begin{cases}
+\frac{1}{2}(z_i - y_i)^2 & \text{if } |z_i - y_i| < 1 \\[2pt]
+|z_i - y_i| - \frac{1}{2} & \text{otherwise}
+\end{cases}
+\tag{4}
+$$
+
+<h4>10.3.3 Cox-PH Survival ($L = -1$): Negative log-partial likelihood</h4>
+
+<p>
+For survival analysis, the model outputs a single scalar $r_i = z_i$ interpreted as the
+log-hazard ratio under a Cox proportional hazards model [2]. Let
+$\delta_i \in \{0, 1\}$ be the event indicator ($1$ = event observed, $0$ = censored) and
+$T_i$ the observed time. Samples must be sorted by time in descending order
+($T_1 \geq T_2 \geq \cdots \geq T_n$).
+</p>
+
+<p>
+The loss is the negative log-partial likelihood under the Breslow approximation [3]:
+</p>
+
+$$
+\mathcal{L}_{\text{Cox}} = -\frac{1}{\sum_{i}\delta_i}\sum_{i=1}^{n}\delta_i\!\left[r_i - \log\!\sum_{k=1}^{i}\exp(r_k)\right]
+\tag{5}
+$$
+
+<p>
+where $\sum_{k=1}^{i}\exp(r_k)$ is the cumulative hazard sum computed via
+<code>torch.cumsum</code>. This formulation sums over the at-risk set $\mathcal{R}_i = \{k : T_k \geq T_i\}$
+(with descending sort and forward cumsum, $\mathcal{R}_i = \{1, \ldots, i\}$), and the loss is normalized by the
+total number of observed events [4].
+</p>
+
+<div class="note">
+<strong>Implementation detail.</strong> Before computing the loss, samples are sorted in
+descending order of $T_i$ via <code>argsort(descending=True)</code>. The event indicator $\delta_i$ and
+predictions $r_i$ are reindexed accordingly.
+</div>
+
+<h3>10.4 Evaluation Metrics</h3>
+
+<p class="table-caption">Table 4. Evaluation metrics for each prediction mode.</p>
+<table>
+<tr><th>Mode</th><th>Metric</th><th>Definition</th></tr>
+<tr>
+  <td>Classification</td>
+  <td>MCC [5]</td>
+  <td>
+    $\displaystyle\text{MCC} = \frac{\text{TP}\!\cdot\!\text{TN} - \text{FP}\!\cdot\!\text{FN}}
+    {\sqrt{(\text{TP}{+}\text{FP})(\text{TP}{+}\text{FN})(\text{TN}{+}\text{FP})(\text{TN}{+}\text{FN})}}$
+  </td>
+</tr>
+<tr>
+  <td>Regression</td>
+  <td>Pearson $\rho$</td>
+  <td>
+    $\displaystyle\rho = \frac{\sum_i (z_i - \bar{z})(y_i - \bar{y})}
+    {\sqrt{\sum_i (z_i - \bar{z})^2}\;\sqrt{\sum_i (y_i - \bar{y})^2}}$
+  </td>
+</tr>
+<tr>
+  <td>Multi-regression</td>
+  <td>Mean $\rho$</td>
+  <td>$\displaystyle\bar\rho = \frac{1}{|L|}\sum_{\ell=1}^{|L|}\rho_\ell$</td>
+</tr>
+<tr>
+  <td>Survival</td>
+  <td>C-index [6]</td>
+  <td>
+    $\displaystyle C = \frac{\sum_{i \lt j}\mathbf{1}[\hat{h}_i \gt \hat{h}_j]\,\mathbf{1}[T_i \lt T_j]\,\delta_i}
+    {\sum_{i \lt j}\mathbf{1}[T_i \lt T_j]\,\delta_i}$
+  </td>
+</tr>
+</table>
+
+<p>
+For the C-index, $\hat{h}_i = \exp(r_i)$ is the predicted hazard. The C-index ranges from 0
+to 1, where 0.5 indicates random concordance and 1.0 indicates perfect discrimination. The
+implementation uses the <code>lifelines</code> library [7], which expects higher
+<code>predicted_scores</code> to indicate longer survival; accordingly, the negated hazard
+$-\hat{h}_i$ is passed as the predicted score.
+</p>
+
+<h3>10.5 Additional Distributional Metrics</h3>
+
+<p>
+PhialBCR also provides utility functions for comparing predicted and true label distributions:
+</p>
+
+<p><strong>Kullback&ndash;Leibler divergence:</strong></p>
+
+$$
+D_{\text{KL}}(P \,\|\, Q) = \sum_{x} P(x)\,\log\frac{P(x)}{Q(x)}
+$$
+
+<p><strong>Jensen&ndash;Shannon divergence:</strong></p>
+
+$$
+\text{JSD}(P, Q) = \tfrac{1}{2}\,D_{\text{KL}}(P \,\|\, M) + \tfrac{1}{2}\,D_{\text{KL}}(Q \,\|\, M), \quad M = \tfrac{1}{2}(P + Q)
+$$
+
+<!-- ============================================================ 11. BATCH -->
+
+<h2 id="sec-batch">11. PhialBCR_batch</h2>
+
+<h3>11.1 Motivation</h3>
+
+<p>
+PhialBCR_batch augments PhialBCR with batch normalization [8] to reduce internal covariate
+shift, stabilize gradient flow, and enable the use of higher learning rates. The complete
+architecture is shown in Figure&nbsp;2.
+</p>
+
+<h3>11.2 Architecture</h3>
+
+<p>
+Three BatchNorm1d layers are inserted at key positions in the network:
+</p>
+
+<p class="table-caption">Table 5. Batch normalization placement in PhialBCR_batch.</p>
+<table>
+<tr><th>Layer</th><th>Position</th><th>Dimension</th></tr>
+<tr><td>$\text{BN}_0$</td><td>After embedding flatten, before $k$-mer layer</td><td>$S \cdot E$</td></tr>
+<tr><td>$\text{BN}_1$</td><td>After $k$-mer layer activation</td><td>$N$</td></tr>
+<tr><td>$\text{BN}_2$</td><td>After motif layer activation</td><td>$N$</td></tr>
+</table>
+
+<h3>11.3 Forward Pass</h3>
+
+<p>
+The complete forward pass, incorporating sparse computation (Section 9) and batch
+normalization, is illustrated in Figure&nbsp;2 and formalized as:
+</p>
+
+<p class="diagram-caption"><strong>Figure 2.</strong> PhialBCR_batch forward pass. Tensor dimensions are
+annotated at each stage. <em>V</em> = number of valid (non-padded) <em>k</em>-mers;
+<em>B</em> = batch size. The two key architectural contributions&mdash;repertoire-level
+max-pooling and the isotype-aware gene layer&mdash;are highlighted in amber.</p>
+<div class="diagram-container">
+<pre class="mermaid">
+graph TD
+    X["<b>Sequences X</b><br/>[B, M, S] integers"]
+    C["<b>Counts c</b><br/>[B, M, C] binary"]
+
+    X --> SF1["Sparse Filter<br/><i>keep V valid k-mers</i>"]
+    C --> SF2["Sparse Filter<br/>[V, C]"]
+
+    SF1 --> EM["Embedding<br/>[V, S, E]"]
+    EM --> FL["Flatten<br/>[V, S&#183;E]"]
+    FL --> BN0["BN&#8320;<br/>[V, S&#183;E]"]
+    BN0 --> FC1["Linear fc&#8321;<br/>[V, N]"]
+    FC1 --> R1["ReLU"]
+    R1 --> BN1["BN&#8321;<br/>[V, N]"]
+
+    BN1 --> OP["Outer Product<br/>[V, N, C]"]
+    SF2 --> OP
+
+    OP --> SC["Scatter + Reshape<br/>[B&#183;M, N, C]"]
+    SC --> MP["Max-Pool over M<br/>[B, N, C]"]
+    MP --> D1["Dropout&#8321;"]
+    D1 --> GL["Gene Layer<br/><i>Hadamard &#8857; W&#8322;, sum over C</i><br/>[B, N]"]
+    GL --> R2["ReLU"]
+    R2 --> BN2["BN&#8322;<br/>[B, N]"]
+    BN2 --> D2["Dropout&#8322;"]
+    D2 --> OUT["Linear out<br/>[B, L]"]
+    OUT --> Z["<b>Output z</b>"]
+
+    style X fill:#e8edf2,stroke:#1a3c5e,stroke-width:2px
+    style C fill:#e8edf2,stroke:#1a3c5e,stroke-width:2px
+    style Z fill:#d5e8d4,stroke:#2c3e50,stroke-width:2px
+    style MP fill:#fff3cd,stroke:#856404,stroke-width:1.5px
+    style GL fill:#fff3cd,stroke:#856404,stroke-width:1.5px
+    style OP fill:#fff3cd,stroke:#856404,stroke-width:1.5px
+</pre>
+</div>
+
+$$
+\begin{aligned}
+\bm{e} &= \text{BN}_0\!\Bigl(\text{Flatten}\bigl(\text{Embed}(\bm{X}_{\text{valid}})\bigr)\Bigr) && \in \RR^{V \times (S \cdot E)} \\[4pt]
+\bm{h} &= \text{BN}_1\!\Bigl(\text{ReLU}\bigl(\bm{W}_1\,\bm{e} + \bm{b}_1\bigr)\Bigr) && \in \RR^{V \times N} \\[4pt]
+\bm{G} &= \bm{h}\,\bm{c}_{\text{valid}}^\top && \in \RR^{V \times N \times C} \\[4pt]
+\bm{P}_i &= \text{Dropout}_1\!\bigl(\max\nolimits_{j}\, \bm{G}_{i}\bigr) && \in \RR^{N \times C} \\[4pt]
+\bm{m}_i &= \text{BN}_2\!\Bigl(\text{ReLU}\bigl(\textstyle\sum_{c=1}^{C}\bm{P}_{i,:,c} \odot \bm{W}_{2,:,c} + \bm{b}_2\bigr)\Bigr) && \in \RR^{N} \\[4pt]
+\bm{z}_i &= \bm{W}_{\text{out}}\,\text{Dropout}_2(\bm{m}_i) + \bm{b}_{\text{out}} && \in \RR^{L}
+\end{aligned}
+\tag{6}
+$$
+
+<!-- ============================================================ 12. MTL -->
+
+<h2 id="sec-mtl">12. PhialBCR_MTL</h2>
+
+<h3>12.1 Motivation</h3>
+
+<p>
+In many clinical settings, multiple targets are available for each patient&mdash;for example,
+cancer subtype, gene expression signatures, and survival outcome&mdash;but individual labels
+may be missing for subsets of patients. PhialBCR_MTL extends PhialBCR_batch into a
+multi-task learning framework that jointly optimizes over multiple heterogeneous objectives
+while gracefully handling missing data through per-task NaN masking (Figure&nbsp;3).
+</p>
+
+<h3>12.2 Architecture</h3>
+
+<p>
+The shared hidden layers are identical to PhialBCR_batch: embedding, $\text{BN}_0$,
+$k$-mer layer, $\text{BN}_1$, gene layer, max-pooling, dropout, motif layer, $\text{BN}_2$,
+and dropout. The single output layer is replaced by a <code>ModuleList</code> of $K$
+task-specific linear heads:
+</p>
+
+$$
+\bm{z}_i^{(k)} = \bm{W}_{\text{out}}^{(k)}\,\bm{m}_i + \bm{b}_{\text{out}}^{(k)}, \quad k = 1, \ldots, K
+\tag{7}
+$$
+
+<p>
+where the output dimension of each head is determined by the task type. Task outputs are
+concatenated into a single vector $\bm{z}_i = [\bm{z}_i^{(1)} \| \cdots \| \bm{z}_i^{(K)}]$.
+The architecture is illustrated in Figure&nbsp;3.
+</p>
+
+<p class="diagram-caption"><strong>Figure 3.</strong> PhialBCR_MTL multi-task architecture. A shared
+PhialBCR_batch backbone produces the motif representation <b>m</b>, which is dispatched to
+<em>K</em> task-specific linear heads. Each head computes its own loss; the total loss is
+a weighted sum.</p>
+<div id="fig3-wrapper" class="diagram-container">
+<pre id="fig3-mermaid" class="mermaid">
+graph TD
+    IN["<b>Input</b><br/>Sequences X, Counts c"]
+    IN --> SHARED["<b>Shared PhialBCR_batch Backbone</b><br/><i>Embed &#8594; BN&#8320; &#8594; fc&#8321; &#8594; BN&#8321; &#8594;<br/>Outer Product &#8594; Max-Pool &#8594;<br/>Gene Layer &#8594; BN&#8322;</i>"]
+    SHARED --> M["<b>Motif representation m</b><br/>[B, N]"]
+
+    M --> H1["Head 1: Linear<br/><i>Classification</i>"]
+    M --> H2["Head 2: Linear<br/><i>Regression</i>"]
+    M --> H3["..."]
+    M --> HK["Head K: Linear<br/><i>Survival</i>"]
+
+    H1 --> L1["Cross-Entropy"]
+    H2 --> L2["Smooth L1"]
+    HK --> LK["Cox-PH"]
+
+    L1 --> LOSS["<b>Total Loss</b><br/>L = &#931; &#955;&#8342; &#183; L&#8342;"]
+    L2 --> LOSS
+    LK --> LOSS
+
+    style IN fill:#e8edf2,stroke:#1a3c5e,stroke-width:2px
+    style SHARED fill:#f0f4f8,stroke:#1a3c5e,stroke-width:2px
+    style M fill:#d5e8d4,stroke:#2c3e50,stroke-width:2px
+    style H1 fill:#dae8fc,stroke:#2c3e50,stroke-width:1.5px
+    style H2 fill:#dae8fc,stroke:#2c3e50,stroke-width:1.5px
+    style HK fill:#dae8fc,stroke:#2c3e50,stroke-width:1.5px
+    style H3 fill:none,stroke:none,color:#666
+    style LOSS fill:#fff3cd,stroke:#856404,stroke-width:2px
+</pre>
+</div>
+
+<h3>12.3 Multi-Task Objective</h3>
+
+<p>
+The total loss is a convex combination of per-task losses:
+</p>
+
+$$
+\mathcal{L} = \sum_{k=1}^{K} \lambda_k\,\mathcal{L}_k
+\tag{8}
+$$
+
+<p>
+where $\lambda_1, \ldots, \lambda_K > 0$ are user-specified task weights. Each task loss
+$\mathcal{L}_k$ is computed according to the task type as specified in Table&nbsp;3 (cross-entropy
+for classification, smooth $\ell_1$ for regression, Cox-PH for survival).
+</p>
+
+<h3>12.4 Missing Data Handling</h3>
+
+<p>
+Targets are allowed to contain NaN values for any task. Before computing each task loss,
+samples with missing targets are filtered:
+</p>
+
+<p class="table-caption">Table 6. NaN masking strategy for each task type.</p>
+<table>
+<tr><th>Task Type</th><th>$L_k$</th><th>Masking Rule</th></tr>
+<tr><td>Classification</td><td>$> 1$</td><td>Exclude samples where $y_i^{(k)}$ is NaN</td></tr>
+<tr><td>Scalar regression</td><td>$= 1$</td><td>Exclude samples where $y_i^{(k)}$ is NaN</td></tr>
+<tr><td>Multi-target regression</td><td>$\lt -1$</td><td>Exclude samples where <em>any</em> component of $\bm{y}_i^{(k)}$ is NaN</td></tr>
+<tr><td>Cox-PH survival</td><td>$= -1$</td><td>Exclude samples where $y_i^{(k)}$ is NaN</td></tr>
+</table>
+
+<p>
+If a task loss evaluates to NaN (e.g., when all samples in a batch are masked), it is replaced
+with zero to prevent gradient corruption.
+</p>
+
+<h3>12.5 Survival Target Encoding</h3>
+
+<p>
+For survival tasks, the event time and censoring status are encoded in a single scalar target
+using a sign convention:
+</p>
+
+$$
+T_i = |y_i|, \qquad \delta_i = \mathbf{1}[y_i \gt 0]
+\tag{9}
+$$
+
+<p>
+A positive value $y_i \gt 0$ indicates an observed event at time $|y_i|$ ($\delta_i = 1$),
+while a negative value $y_i \lt 0$ indicates right-censoring at time $|y_i|$ ($\delta_i = 0$).
+</p>
+
+<h3>12.6 Multi-Task Evaluation</h3>
+
+<p>
+Each task is evaluated with its mode-appropriate metric (Table&nbsp;4). The overall score
+is the sum of per-task metrics:
+</p>
+
+$$
+\text{score} = \sum_{k=1}^{K} s_k
+$$
+
+<p>
+where $s_k \in \{\text{MCC}_k, \rho_k, \bar\rho_k, C_k\}$ depending on task type.
+</p>
+
+<!-- ============================================================ 13. INIT -->
+
+<h2 id="sec-init">13. Weight Initialization and Regularization</h2>
+
+<h3>13.1 Weight Initialization</h3>
+
+<p>
+All models use the following initialization scheme:
+</p>
+
+<p class="table-caption">Table 7. Weight initialization strategies by layer type.</p>
+<table>
+<tr><th>Layer Type</th><th>Weight Init.</th><th>Bias Init.</th><th>Reference</th></tr>
+<tr>
+  <td>Linear (fully connected)</td>
+  <td>Xavier normal: $\;w \sim \mathcal{N}\!\left(0,\;\frac{2}{n_{\text{in}} + n_{\text{out}}}\right)$</td>
+  <td>$\bm{0}$</td>
+  <td>[9]</td>
+</tr>
+<tr>
+  <td>BatchNorm1d</td>
+  <td>$\gamma = 1$</td>
+  <td>$\beta = 0$</td>
+  <td>[8]</td>
+</tr>
+</table>
+
+<h3>13.2 Regularization</h3>
+
+<p>
+The following regularization strategies are employed:
+</p>
+
+<ul style="padding-left:1.5rem; margin-bottom:0.9rem;">
+<li><strong>Dropout</strong> ($p = 0.5$): Applied at two positions in all isotype-aware
+models&mdash;after max-pooling ($\text{Dropout}_1$) and after the motif layer
+($\text{Dropout}_2$).</li>
+<li><strong>Batch normalization</strong>: Three layers in PhialBCR_batch and its descendants
+(Table&nbsp;5), providing implicit regularization through mini-batch statistics [8].</li>
+<li><strong>Smooth $\ell_1$ loss</strong>: The Huber loss used for regression tasks is less
+sensitive to outliers than squared error, providing a form of robust estimation.</li>
+</ul>
+
+<p>
+No explicit weight decay ($\ell_2$ penalty) is applied by default.
+</p>
+
+<!-- ============================================================ 14. TRAINING -->
+
+<h2 id="sec-training">14. Training Procedure</h2>
+
+<h3>14.1 Optimization</h3>
+
+<p>
+All models are trained with the Adam optimizer [11]. The default initial learning rate is
+$\eta_0 = 0.01$, decayed by a step schedule:
+</p>
+
+$$
+\eta_t = \eta_0 \cdot \gamma^{\lfloor t / T_{\text{step}} \rfloor}
+\tag{10}
+$$
+
+<p>
+where $\gamma = 0.5$ (decay factor) and $T_{\text{step}} = 10$ (step size in epochs) by default.
+This is implemented via PyTorch's <code>StepLR</code> scheduler.
+</p>
+
+<h3>14.2 Model Selection</h3>
+
+<p>
+During training, model performance is evaluated on a held-out validation set at each epoch
+using the mode-appropriate metric (Table&nbsp;4). The checkpoint with the best validation score
+is retained as the final model.
+</p>
+
+<h3>14.3 Implementation</h3>
+
+<p>
+The implementation uses PyTorch [12] and is compatible with both CPU and CUDA-enabled GPU devices.
+The C-index computation relies on the <code>lifelines</code> library [7].
+</p>
+
+<!-- ============================================================ 15. SUMMARY -->
+
+<h2 id="sec-summary">15. Summary</h2>
+
+<p class="table-caption">Table 8. Summary of model hierarchy. Each row describes the components added
+relative to the parent model.</p>
+<table>
+<tr><th>Model</th><th>Parent</th><th>Components Added</th><th>New Parameters</th></tr>
+<tr>
+  <td>RepertoireModel</td>
+  <td>nn.Module</td>
+  <td>Single linear layer, max-pool, training loop</td>
+  <td>$\bm{W} \in \RR^{2 \times S}$</td>
+</tr>
+<tr>
+  <td>TwoLayerModel</td>
+  <td>RepertoireModel</td>
+  <td>Hidden motif layer of width $N$</td>
+  <td>$\bm{W}_1 \in \RR^{N \times S}$, $\bm{W}_2 \in \RR^{L \times N}$</td>
+</tr>
+<tr>
+  <td>EncodeLayerModel</td>
+  <td>TwoLayerModel</td>
+  <td>Learnable amino acid embedding</td>
+  <td>$\bm{E}_{\text{embed}} \in \RR^{|\mathcal{A}| \times E}$</td>
+</tr>
+<tr>
+  <td>IsotypeModel</td>
+  <td>EncodeLayerModel</td>
+  <td>Isotype outer product, gene layer, dropout</td>
+  <td>$\bm{W}_{\text{gene}} \in \RR^{N \times C}$, $\text{drop}_{1,2}$</td>
+</tr>
+<tr>
+  <td>IsotypeModelFast</td>
+  <td>IsotypeModel</td>
+  <td>Sparse valid-sequence filtering</td>
+  <td>&mdash;</td>
+</tr>
+<tr>
+  <td>PhialBCR</td>
+  <td>IsotypeModelFast</td>
+  <td>4 prediction modes, Cox-PH loss, C-index</td>
+  <td>Mode-specific $\bm{W}_{\text{out}}$</td>
+</tr>
+<tr>
+  <td>PhialBCR_batch</td>
+  <td>PhialBCR</td>
+  <td>Batch normalization (3 layers)</td>
+  <td>$\text{BN}_0$, $\text{BN}_1$, $\text{BN}_2$ ($\gamma, \beta$)</td>
+</tr>
+<tr>
+  <td>PhialBCR_MTL</td>
+  <td>PhialBCR_batch</td>
+  <td>Multi-task heads, $\lambda$-weighted loss, NaN masking</td>
+  <td>$\{\bm{W}_{\text{out}}^{(k)}\}_{k=1}^{K}$</td>
+</tr>
+</table>
+
+<hr>
+
+<!-- ============================================================ REFERENCES -->
+
+<h2 id="sec-references">16. References</h2>
+
+<div class="ref">
+<ol>
+<li>Atchley, W.R., Zhao, J., Fernandes, A.D. &amp; Dr&auml;ke, T. Solving the protein sequence metric problem. <em>Proceedings of the National Academy of Sciences</em>, 102(18):6395&ndash;6400, 2005.</li>
+<li>Cox, D.R. Regression models and life-tables. <em>Journal of the Royal Statistical Society: Series B</em>, 34(2):187&ndash;220, 1972.</li>
+<li>Breslow, N.E. Covariance analysis of censored survival data. <em>Biometrics</em>, 30(1):89&ndash;99, 1974.</li>
+<li>Katzman, J.L., Shaham, U., Cloninger, A., Bates, J., Jiang, T. &amp; Kluger, Y. DeepSurv: Personalized treatment recommender system using a Cox proportional hazards deep neural network. <em>BMC Medical Research Methodology</em>, 18(1):24, 2018.</li>
+<li>Matthews, B.W. Comparison of the predicted and observed secondary structure of T4 phage lysozyme. <em>Biochimica et Biophysica Acta (BBA) &ndash; Protein Structure</em>, 405(2):442&ndash;451, 1975.</li>
+<li>Harrell, F.E., Califf, R.M., Pryor, D.B., Lee, K.L. &amp; Rosati, R.A. Evaluating the yield of medical tests. <em>JAMA</em>, 247(18):2543&ndash;2546, 1982.</li>
+<li>Davidson-Pilon, C. lifelines: survival analysis in Python. <em>Journal of Open Source Software</em>, 4(40):1317, 2019.</li>
+<li>Ioffe, S. &amp; Szegedy, C. Batch normalization: Accelerating deep network training by reducing internal covariate shift. <em>Proceedings of the 32nd International Conference on Machine Learning (ICML)</em>, pp. 448&ndash;456, 2015.</li>
+<li>Glorot, X. &amp; Bengio, Y. Understanding the difficulty of training deep feedforward neural networks. <em>Proceedings of the 13th International Conference on Artificial Intelligence and Statistics (AISTATS)</em>, pp. 249&ndash;256, 2010.</li>
+<li>He, K., Zhang, X., Ren, S. &amp; Sun, J. Delving deep into rectifiers: Surpassing human-level performance on ImageNet classification. <em>Proceedings of the IEEE International Conference on Computer Vision (ICCV)</em>, pp. 1026&ndash;1034, 2015.</li>
+<li>Kingma, D.P. &amp; Ba, J. Adam: A method for stochastic optimization. <em>Proceedings of the 3rd International Conference on Learning Representations (ICLR)</em>, 2015.</li>
+<li>Paszke, A. <em>et al.</em> PyTorch: An imperative style, high-performance deep learning library. <em>Advances in Neural Information Processing Systems (NeurIPS)</em>, 32:8024&ndash;8035, 2019.</li>
+</ol>
+</div>
+
+<hr>
+
+<p style="text-align:center; color:#888; font-size:0.82rem; margin-top:1.5rem;">
+STEAD-AI &mdash; &copy; GV20 Therapeutics &mdash; Apache License 2.0
+</p>
+
+</body>
+</html>
